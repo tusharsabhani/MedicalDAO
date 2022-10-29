@@ -17,9 +17,11 @@ contract Request {
         requestDetails[numRequestDetails].emailId = emailId;
         requestDetails[numRequestDetails].amount = amount;
         requestDetails[numRequestDetails].description = description;
+        requestDetails[numRequestDetails].requester = msg.sender;
+        requestDetails[numRequestDetails].isActive = true;
 
         numRequestDetails++;
-    }
+    }   
 
     struct RequestDetails{
         string hospitalName;
@@ -28,6 +30,7 @@ contract Request {
         string emailId;
         string amount;
         string description;
-        //need address also to send money to
+        address requester;
+        bool isActive; 
     }
 }
