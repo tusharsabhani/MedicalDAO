@@ -1,12 +1,29 @@
 import Head from 'next/head'
-import Image from 'next/image'
-import { useState } from 'react'
+import { BigNumber, Contract, providers } from "ethers";
+import { useState, useEffect } from 'react'
 import styles from '../styles/Home.module.css'
+import {REQUEST_CONTRACT_ADDRESS, REQUEST_ABI} from "../constants";
 
 export default function Home() {
 
+  const zero = BigNumber.from(0);
+  const [requests, setRequests] = useState([]);
   const [numberOfRequests, setNumberOfRequests] = useState("0");
   const [walletConnected, setWalletConnected] = useState("false");
+  const [hospitalName, setHospitalName] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+  const [email, setEmail] = useState("");
+  const [amount, setAmount] = useState(zero);
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState("Home");
+
+  useEffect(() => {
+    if (page === "Donate") {
+      fetchAll();
+    }
+  }, [page]);
 
   const connectWallet = async () => {
     try{
@@ -18,21 +35,171 @@ export default function Home() {
   }
 
   const getProviderOrSigner = async(signer = false) => {
+  }
 
+  const fetchRequestsById = async (id) => {
+    try{
+      const provider = await getProviderOrSigner();
+      const contract = getContract(provider);
+      const requests = await contract.requestDetails(id);
+      const fetchedRequest = {
+        requestId : id,
+        hospitalName: requests.hospitalName.toString(), 
+        country: requests.country.toString(),
+        city: requests.city.toString(),
+        emailId: requests.emailId.toString(),
+        amount: requests.amount.toString(),
+        description: requests.description.toString(),
+        isActive: requests.isActive,
+      };
+      return fetchedRequest;
+    }catch(error){
+      console.error(error);
+    }
+  };
+
+  const fetchAll = async () => {
+    try{
+      const requests = [];
+      for(let i = 0; i < numberOfRequests; i++){
+        const request = await fetchRequestsById(i);
+        requests.push(request);
+      }
+      setRequests(requests); 
+    }catch(error){
+      console.error(error);
+    }
+  };
+
+  const submit = async () => {
+    try{
+      setLoading(true);
+      const signer  = await getProviderOrSigner(true);
+      const reqContract = getDaoContract(signer);
+      const txn = await reqContract.saveRequestDetails(hospitalName, city, country, email, amount, description);
+      await txn.wait();
+      await getNumberOfRequests();
+      setLoading(false);
+    }catch(error){
+      console.error(error);
+    }
+  }
+
+  const getDaoContract = async (providerOrSigner) => {
+    return new Contract(
+      REQUEST_CONTRACT_ADDRESS,
+      REQUEST_ABI,
+      providerOrSigner
+    );
+  }
+
+  const getNumberOfRequests = async () => {
+    try{
+      const provider = await getProviderOrSigner();
+      const reqContract = getDaoContract(provider);
+      const num = await reqContract.numRequestDetails();
+      setNumberOfRequests(num.toString());
+    }catch(error){
+      console.error(error);
+    }
   }
 
   function renderRequest(){
-    return(
-      <div></div>
-    )
+    if(loading){
+      return(<div>UPLOADING REQUEST!</div>)
+    }else{
+      return(
+        <div class="bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100">
+          <div class="w-full h-auto block h-screen  p-4 flex items-center justify-center">
+      <div class="bg-white py-6 px-10 sm:max-w-md w-full ">
+          <div class="sm:text-3xl text-2xl font-semibold text-center text-sky-600  mb-12">
+              Registration Form 
+          </div>
+          <div class="">
+              <div>
+                   <input type="text" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500" placeholder="Hospital/Organisation Name" onChange={(e) => setHospitalName(e.target.value)}/>
+              </div>
+              <div>
+                  <input type="text" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 my-8" placeholder="City" onChange={(e) => setCity(e.target.value)}/>
+              </div>
+              <div>
+                <input type="text" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Country" onChange={(e) => setCountry(e.target.value)}/>
+              </div>
+              <div>
+                <input type="email" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Email" onChange={(e) => setEmail(e.target.value)}/>
+              </div>
+              <div>
+                <input type="number" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Amount(in Ether)" onChange={(e) => setAmount(BigNumber.from(e.target.value))}/>
+              </div>
+        <div>
+                <textarea type="text" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Description" onChange={(e) => setDescription(e.target.value)}/>
+              </div>
+              <div class="flex justify-center my-6">
+                  <button class=" rounded-full  p-3 w-full sm:w-56   bg-gradient-to-r from-sky-600  to-teal-300 text-white text-lg font-semibold" onClick={submit}>
+                      Submit
+                  </button>
+              </div>
+          </div>
+      </div>
+  </div>
+        </div>
+      )
+    }
   }
 
   function renderDonate(){
-    return(
-      <div>
+    if(requests.length === 0){
+      return(
+        <div class="w-full h-auto block h-screen  p-4 flex items-center justify-center bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100"> 
+          <p>No Requests at the moment. Come back later to help!</p>
+        </div>
+      )
+    }else{
+      return(
+        <div class="w-full h-auto block h-screen  p-4 flex items-center justify-center bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100">
+          {requests.map((m, i) =>(
+            //NEED CLASS FOR CARDS
+            <div key={index}>
+              <p>Request Id: {}</p>
+              <p>Hospital Name: </p>
+              <p>Country: </p>
+              <p>City: </p>
+              <p>Email : </p>
+              <p>Amount: </p>
+              <p>Description: </p>
+              {p.isActive ? (
+                <div>
+                  <input type="number" class="border-solid border-[3px] border-rose-600 w-full"/>
+                  <button>DONATE</button>
+                </div>
+              ) : (<div>Mission Successful!!! No more donations needed.</div>) 
+              }
+            </div>
+          ))}
+        </div>
+      )
+    }
+  }
 
+  function renderVote(){
+    return(
+      <div class="w-full h-auto block h-screen  p-4 flex items-center justify-center bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100">
+        <p>VOTE!</p>
       </div>
     )
+  }
+
+  //open appropriate page
+  function openTab(){
+    if(page === "Home"){
+
+    }else if(page === "Request"){
+      return renderRequest();
+    }else if(page === "Donate"){
+      return renderDonate();
+    }else if(page === "Vote"){
+      return renderVote();
+    }
   }
 
   return (
@@ -46,44 +213,18 @@ export default function Home() {
       <main className={styles.main} class="bg-pink-50">
         <nav class="px-4 py-3 bg-black text-white flex justify-end fixed w-full top-0">
           <ul class="pl-28 py-1 flex space-x-11">
-              <li class="cursor-pointer" onClick={renderRequest()}>Request</li>
-              <li class="cursor-pointer">Donate</li>
-              <li class="cursor-pointer">Vote</li>
+              <li class="cursor-pointer" onClick={() => setPage("Request")}>Request</li>
+              <li class="cursor-pointer" onClick={() => setPage("Donate")}>Donate</li>
+              <li class="cursor-pointer" onClick={() => setPage("Vote")}>Vote</li>
               <button class="bg-purple-400 rounded-lg text-white px-4 py-1 font-semibold" onClick={connectWallet}>Connect Wallet</button>
           </ul>
         </nav>
-        <div class=" bg-purple-500">
         <div>
-            <p class="text-center p-8 text-teal-600 text-6xl font-bold">Request Form</p>
+          {openTab()}
         </div>
-        <div class="mx-80 my-10 px-20 py-10 border-solid border-8 border-blue-800 rounded-2xl space-y-2">
-            <p class="text-2xl font-semibold">Hospital/Organisation Name:</p>
-            <input type="text" class="border-solid border-[3px] border-rose-600 w-full"/>
-            
-            <div class="flex space-x-10 pt-5">
-                <p class="text-2xl font-semibold">City:</p>
-                <input type="text" class="border-solid border-[3px] border-rose-600 w-1/3 h-8"/>
-                <p class="text-2xl font-semibold">Country:</p>
-                <input type="text" class="border-solid border-[3px] border-rose-600 w-1/3"/>
-            </div>
-            <div class="flex space-x-10 pt-5">
-                <p class="text-2xl font-semibold whitespace-nowrap">Email ID:</p>
-                <input type="text" class="border-solid border-[3px] border-rose-600 w-full"/>
-            </div>
-            <div class="flex space-x-10 pt-5">
-                <p class="text-2xl font-semibold whitespace-nowrap">Amount (in Ether):</p>
-                <input type="number" class="border-solid border-[3px] border-rose-600 w-full"/>
-            </div>
-            <p class="text-2xl font-semibold pt-5">Description:</p>
-            <textarea type="text" class="border-solid border-[3px] border-rose-600 w-full h-36" cols="100"></textarea>
-            <div class="text-center pt-5">
-                <button type="submit" class="bg-rose-600 text-white p-4 text-xl rounded-2xl">SUBMIT</button>
-            </div>
-        </div>
-    </div>
       </main>
 
-      <footer className={styles.footer}>
+      <footer class="bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 text-center ">
         <p>Made by Varun & Tushar</p>
       </footer>
     </div>

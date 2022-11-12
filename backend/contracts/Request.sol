@@ -7,7 +7,7 @@ contract Request {
     uint256 public numRequestDetails;
 
     function saveRequestDetails(string memory hospitalName, string memory city, string memory country,
-                                string memory emailId, string memory amount, string memory description)
+                                string memory emailId, uint256 amount, string memory description)
                                 external {
         
 
@@ -19,6 +19,7 @@ contract Request {
         requestDetails[numRequestDetails].description = description;
         requestDetails[numRequestDetails].requester = msg.sender;
         requestDetails[numRequestDetails].isActive = true;
+        requestDetails[numRequestDetails].amountReceived = 0;
 
         numRequestDetails++;
     }   
@@ -28,9 +29,10 @@ contract Request {
         string country;
         string city;
         string emailId;
-        string amount;
+        uint256 amount;
         string description;
         address requester;
         bool isActive; 
+        uint256 amountReceived;
     }
 }
