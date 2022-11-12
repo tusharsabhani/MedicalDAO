@@ -1,7 +1,8 @@
-import Head from 'next/head'
+import Head from 'next/head';
 import { BigNumber, Contract, providers } from "ethers";
-import { useState, useEffect } from 'react'
-import styles from '../styles/Home.module.css'
+import { useState, useEffect, useRef } from 'react';
+import styles from '../styles/Home.module.css';
+import Web3Modal from "web3modal";
 import {REQUEST_CONTRACT_ADDRESS, REQUEST_ABI} from "../constants";
 
 export default function Home() {
@@ -18,6 +19,18 @@ export default function Home() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState("Home");
+  const web3ModalRef = useRef();  
+
+  useEffect(() => {
+    if (!walletConnected) {
+      web3ModalRef.current = new Web3Modal({
+        network: "mumbai",
+        providerOptions: {},
+        disableInjectedProvider: false,
+      });
+      connectWallet();
+    }
+  }, [walletConnected]);
 
   useEffect(() => {
     if (page === "Donate") {
@@ -34,7 +47,21 @@ export default function Home() {
     }
   }
 
-  const getProviderOrSigner = async(signer = false) => {
+  const getProviderOrSigner = async(needSigner = false) => {
+    const provider = await web3ModalRef.current.connect();
+    const web3Provider = new providers.Web3Provider(provider);
+
+    const { chainId } = await web3Provider.getNetwork();
+    if (chainId !== 80001) {
+      window.alert("Change the network to Mumbai");
+      throw new Error("Change network to Mumbai");
+    }
+
+    if (needSigner) {
+      const signer = web3Provider.getSigner();
+      return signer;
+    }
+    return web3Provider;
   }
 
   const fetchRequestsById = async (id) => {
@@ -129,7 +156,7 @@ export default function Home() {
                 <input type="email" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Email" onChange={(e) => setEmail(e.target.value)}/>
               </div>
               <div>
-                <input type="number" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Amount(in Ether)" onChange={(e) => setAmount(BigNumber.from(e.target.value))}/>
+                <input type="number" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Amount(in Ether)" onChange={(e) => setAmount(e.target.value)}/>
               </div>
         <div>
                 <textarea type="text" class="focus:outline-none border-b w-full pb-2 border-sky-400 placeholder-gray-500 mb-8" placeholder="Description" onChange={(e) => setDescription(e.target.value)}/>
@@ -189,10 +216,18 @@ export default function Home() {
     )
   }
 
+  function renderHome(){
+    return(
+      <div class="w-full h-auto block h-screen  p-4 flex items-center justify-center bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100">
+        HOME!
+      </div>
+    )
+  }
+
   //open appropriate page
   function openTab(){
     if(page === "Home"){
-
+      return renderHome();
     }else if(page === "Request"){
       return renderRequest();
     }else if(page === "Donate"){

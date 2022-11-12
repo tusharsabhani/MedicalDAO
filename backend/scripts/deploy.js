@@ -15,7 +15,7 @@ async function main() {
   await sleep(50000);
 
   await hre.run("verify:verify", {
-    address: deployedVerifyContract.address,
+    address: deployedRequestContract.address,
     constructorArguments: [],
   });
 }
