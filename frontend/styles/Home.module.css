@@ -21,6 +21,14 @@
   align-items: center;
 }
 
+.proposalCard {
+  width: fit-content;
+  margin-top: 0.25rem;
+  border: black 2px solid;
+  flex: 1;
+  flex-direction: column;
+}
+
 .footer a {
   display: flex;
   justify-content: center;
